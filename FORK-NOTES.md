@@ -28,6 +28,21 @@ and drop the row above.
 remote and local `feat/all-day-calendar-events` branches and drop the row
 above.
 
+## Local deviations from upstream
+
+Deliberate behavior changes this fork carries that upstream does not — and
+that upstream should **not** be asked to adopt without discussion. If a future
+audit-gated sync ever conflicts with one, the deviation wins; resolve the
+conflict by hand and keep this note updated.
+
+- **Drive `share` notifies by email by default.** Upstream sets
+  `sendNotificationEmail=false` on every user/group share
+  (`src/services/drive/patch.ts`), so the "X shared a document with you" email
+  never goes out and the invitee is never told. This fork keeps Google's
+  default (send), with an explicit `sendNotificationEmail: false` param on
+  `manage_drive share` to opt out. Motivated by a real miss: Hamza was granted
+  `writer` on a doc and never received the link.
+
 ## Never open an upstream PR for the fork-local sync workflow
 
 Commit `92ce327 chore: audit-gated upstream sync workflow` — `AGENTS.md`,

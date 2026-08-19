@@ -225,12 +225,31 @@ describe('drivePatch custom handlers', () => {
       expect(body.domain).toBeUndefined();
     });
 
-    it('suppresses email notifications by default for user/group shares', async () => {
+    it('sends email notifications by default for user/group shares', async () => {
       mockCall.mockResolvedValueOnce({ id: 'perm-1' });
 
       const handler = drivePatch.customHandlers!.share!;
-      await handler(
+      const result = await handler(
         { fileId: 'file-1', shareEmail: 'bob@test.com' },
+        'user@test.com',
+      );
+
+      // No sendNotificationEmail param is set: the Drive API's own default is to
+      // send the "shared with you" email, and an explicit false would suppress it.
+      expect(mockCall.mock.calls[0][2].sendNotificationEmail).toBeUndefined();
+      const query = queryOf(await requestFor('drive', 'permissions.create', mockCall.mock.calls[0][2]));
+      expect(query.sendNotificationEmail).toBeUndefined();
+      // The response says so, and refs let follow-ups know an email went out.
+      expect(result.text).toContain('**Notification email:** sent to bob@test.com');
+      expect(result.refs.notificationEmailSent).toBe(true);
+    });
+
+    it('suppresses the notification email only when sendNotificationEmail: false is explicit', async () => {
+      mockCall.mockResolvedValueOnce({ id: 'perm-1' });
+
+      const handler = drivePatch.customHandlers!.share!;
+      const result = await handler(
+        { fileId: 'file-1', shareEmail: 'bob@test.com', sendNotificationEmail: false },
         'user@test.com',
       );
 
@@ -238,6 +257,36 @@ describe('drivePatch custom handlers', () => {
       // sendNotificationEmail is a QUERY param, per the descriptor.
       const query = queryOf(await requestFor('drive', 'permissions.create', mockCall.mock.calls[0][2]));
       expect(query.sendNotificationEmail).toBe('false');
+      expect(result.text).toContain('**Notification email:** suppressed');
+      expect(result.refs.notificationEmailSent).toBe(false);
+    });
+
+    it('forwards an explicit sendNotificationEmail: true', async () => {
+      mockCall.mockResolvedValueOnce({ id: 'perm-1' });
+
+      const handler = drivePatch.customHandlers!.share!;
+      await handler(
+        { fileId: 'file-1', shareEmail: 'bob@test.com', sendNotificationEmail: true },
+        'user@test.com',
+      );
+
+      expect(mockCall.mock.calls[0][2].sendNotificationEmail).toBe(true);
+      const query = queryOf(await requestFor('drive', 'permissions.create', mockCall.mock.calls[0][2]));
+      expect(query.sendNotificationEmail).toBe('true');
+    });
+
+    it('does not send a notification email flag for domain/anyone shares', async () => {
+      mockCall.mockResolvedValueOnce({ id: 'perm-1' });
+
+      const handler = drivePatch.customHandlers!.share!;
+      const result = await handler(
+        { fileId: 'file-1', type: 'anyone', role: 'reader', sendNotificationEmail: false },
+        'user@test.com',
+      );
+
+      expect(mockCall.mock.calls[0][2].sendNotificationEmail).toBeUndefined();
+      expect(result.text).not.toContain('Notification email');
+      expect(result.refs.notificationEmailSent).toBeUndefined();
     });
   });
 

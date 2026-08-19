@@ -482,13 +482,21 @@ export const drivePatch: ServicePatch = {
       }
       // type === 'anyone' needs no additional fields.
 
+      const isEmailTarget = type === 'user' || type === 'group';
+      // Notify by email is the DEFAULT (Google's own default) — a share should
+      // reach the person being granted access, not silently create a permission
+      // they never hear about. Only an explicit `sendNotificationEmail: false`
+      // opts out; `true` is sent through for the record.
       const queryParams: Record<string, unknown> = {
         fileId,
         supportsAllDrives: true,
       };
-      // Skip the noisy "notify by email" default — the caller didn't ask for it.
-      if (type === 'user' || type === 'group') {
-        queryParams.sendNotificationEmail = false;
+      if (isEmailTarget) {
+        if (params.sendNotificationEmail === false) {
+          queryParams.sendNotificationEmail = false;
+        } else if (params.sendNotificationEmail === true) {
+          queryParams.sendNotificationEmail = true;
+        }
       }
 
       const data = await call('drive', 'permissions.create', {
@@ -503,11 +511,23 @@ export const drivePatch: ServicePatch = {
             ? (body.domain as string)
             : 'anyone with the link';
 
+      const notifyByEmail = params.sendNotificationEmail !== false;
+
       return {
         text: `File shared with **${target}** as ${role} (${type}).\n\n` +
           `**File ID:** ${fileId}\n` +
-          `**Permission ID:** ${data.id ?? 'unknown'}`,
-        refs: { fileId, permissionId: data.id, role, type, target },
+          `**Permission ID:** ${data.id ?? 'unknown'}` +
+          (isEmailTarget
+            ? `\n**Notification email:** ${notifyByEmail ? `sent to ${target}` : 'suppressed (sendNotificationEmail: false)'}`
+            : ''),
+        refs: {
+          fileId,
+          permissionId: data.id,
+          role,
+          type,
+          target,
+          ...(isEmailTarget ? { notificationEmailSent: notifyByEmail } : {}),
+        },
       };
     },
 

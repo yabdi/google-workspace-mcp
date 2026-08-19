@@ -193,6 +193,10 @@ operations:
       domain:
         type: string
         description: "Domain name (required when type is 'domain')."
+      sendNotificationEmail:
+        type: boolean
+        description: "Send the recipient a 'shared with you' notification email (default: true). Set false to share without emailing them — only relevant for type 'user' or 'group'."
+        default: true
     defaults:
       supportsAllDrives: true
 
