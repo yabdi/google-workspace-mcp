@@ -12,6 +12,14 @@ upstream PRs opened from this fork, local deviations, and cleanup notes. Check
 it before working on anything that might already have an upstream PR, and keep
 it updated when PRs open or merge.
 
+**Never open an upstream PR for the fork-local sync workflow** (commit
+`92ce327`: `AGENTS.md`, `FORK-NOTES.md`, `scripts/audit-upstream.sh`,
+`scripts/sync-upstream.sh`, `scripts/README.md`). Those files are fork-local
+tooling with machine-specific paths — they never go back upstream. Only
+genuine fixes/features (e.g. the security-audit commit `c215bc5` → PR #187,
+the all-day-calendar commit `1a04235` → PR #188) are PR candidates; check
+`FORK-NOTES.md` for what is already open.
+
 ## The sync rule — fetch upstream → FULL SECURITY AUDIT → merge
 
 **Never merge upstream directly.** `git fetch upstream && git merge upstream/main`
