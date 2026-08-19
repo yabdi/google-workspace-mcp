@@ -5,6 +5,13 @@ cloned at `~/code/google-workspace-mcp`, run **locally** as the Gmail /
 Workspace MCP for Yusuf (opencode + DeepSeek Harness). Remotes: `origin` =
 `yabdi/google-workspace-mcp`, `upstream` = aaronsb.
 
+## Fork state & docs
+
+Fork-local documentation lives in `FORK-NOTES.md` at the repo root — open
+upstream PRs opened from this fork, local deviations, and cleanup notes. Check
+it before working on anything that might already have an upstream PR, and keep
+it updated when PRs open or merge.
+
 ## The sync rule — fetch upstream → FULL SECURITY AUDIT → merge
 
 **Never merge upstream directly.** `git fetch upstream && git merge upstream/main`
