@@ -64,6 +64,10 @@ upstream PR rather than a "deviation". They cover the gaps `gdrive-tools` existe
 `files.create` and `permissions.update` are therefore newly exposed in
 `docs/api-surface.md` (drive 14 → 16 of 64).
 
+`manage_email archive` — save one message's headers + plain-text body to a workspace
+markdown file (port of `~/code/gdrive-tools/scripts/archive_gmail.py`). Reads the message
+and writes a LOCAL file; does not touch Gmail's INBOX label.
+
 ## Local feature (calendar `sendUpdates`, no upstream PR yet)
 
 `manage_calendar create`/`update` and the scratchpad `calendar_event` adapter accept a
