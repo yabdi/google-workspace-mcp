@@ -228,6 +228,22 @@ async function removeMeetLink(
   }, { account }) as Record<string, unknown>;
 }
 
+/**
+ * Resolve the `sendUpdates` param — who gets notification emails about the event.
+ *
+ * Defaults to 'all' (email every attendee). Google's own insert/patch default already
+ * sends; the explicit value keeps that true even if Google ever changes the default,
+ * and gives the model a way to opt out (`none`) or limit the blast radius
+ * (`externalOnly`).
+ */
+function resolveSendUpdates(params: Record<string, unknown>): string {
+  const value = String(params.sendUpdates ?? 'all');
+  if (!['all', 'externalOnly', 'none'].includes(value)) {
+    throw new Error(`sendUpdates must be 'all', 'externalOnly', or 'none' (got '${value}')`);
+  }
+  return value;
+}
+
 export const calendarPatch: ServicePatch = {
   beforeExecute: {
     // Default the range to "from the start of today" when the caller gave none.
@@ -386,11 +402,15 @@ export const calendarPatch: ServicePatch = {
       }
       if (params.description) body.description = String(params.description);
       if (params.location) body.location = String(params.location);
-      if (params.attendees) {
-        body.attendees = String(params.attendees)
-          .split(',').map((e) => e.trim()).filter(Boolean)
-          .map((email) => ({ email }));
+      const attendeeEmails = params.attendees
+        ? String(params.attendees).split(',').map((e) => e.trim()).filter(Boolean)
+        : [];
+      if (attendeeEmails.length > 0) {
+        body.attendees = attendeeEmails.map((email) => ({ email }));
       }
+      // sendUpdates is a QUERY param on events.insert — the descriptor routes it there.
+      const sendUpdates = resolveSendUpdates(params);
+      body.sendUpdates = sendUpdates;
 
       if (params.meet) {
         // Ask Google to mint a Meet link. `requestId` is an IDEMPOTENCY KEY: reuse
@@ -413,10 +433,16 @@ export const calendarPatch: ServicePatch = {
       const meetLink = params.meet ? ' (with Google Meet)' : '';
       const allDayMarker = allDay ? ' (all day)' : '';
       const when = allDay ? allDayRange(start, end) : `${start} – ${end}`;
+      const invites = attendeeEmails.length > 0
+        ? `**Invites:** ${sendUpdates === 'none'
+            ? 'suppressed (sendUpdates: none)'
+            : `emailed to ${attendeeEmails.length} guest${attendeeEmails.length === 1 ? '' : 's'}`}\n`
+        : '';
       return {
         text: `Event created: **${summary}**${meetLink}${allDayMarker}\n\n` +
           `**When:** ${when}\n` +
           (params.location ? `**Where:** ${params.location}\n` : '') +
+          invites +
           `**Calendar:** ${calendarId}\n` +
           `**Event ID:** ${data.id ?? 'unknown'}`,
         refs: { id: data.id, eventId: data.id, calendarId, summary, start, end, allDay },
@@ -477,7 +503,13 @@ export const calendarPatch: ServicePatch = {
       }
 
       // Build --params: note the conferenceDataVersion=1 requirement when creating a Meet link.
-      const queryParams: Record<string, unknown> = { calendarId, eventId };
+      // sendUpdates is a QUERY param on events.patch/events.update — the descriptor routes
+      // it there. Default 'all' — see resolveSendUpdates.
+      const queryParams: Record<string, unknown> = {
+        calendarId,
+        eventId,
+        sendUpdates: resolveSendUpdates(params),
+      };
 
       // Optional Meet link.
       //
@@ -518,7 +550,7 @@ export const calendarPatch: ServicePatch = {
       }
 
       const data = removingMeet
-        ? await removeMeetLink(calendarId, eventId, body, account)
+        ? await removeMeetLink(calendarId, eventId, { ...body, sendUpdates: queryParams.sendUpdates }, account)
         : await call('calendar', 'events.patch', {
           ...queryParams,
           ...body,

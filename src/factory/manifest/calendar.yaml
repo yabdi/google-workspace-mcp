@@ -101,6 +101,10 @@ operations:
       meet:
         type: boolean
         description: "Add a Google Meet video conference link. On `update`, true adds a link and false REMOVES an existing one; omit it to leave the link as it is."
+      sendUpdates:
+        type: string
+        enum: [all, externalOnly, none]
+        description: "Who gets notification emails about the event: 'all' (default) emails every attendee, 'externalOnly' emails only attendees outside your own domain, 'none' sends nothing. On create this is the invitation email; on update, the change notification."
 
   quickAdd:
     type: action
@@ -153,6 +157,10 @@ operations:
       meet:
         type: boolean
         description: "Add a Google Meet video conference link. On `update`, true adds a link and false REMOVES an existing one; omit it to leave the link as it is."
+      sendUpdates:
+        type: string
+        enum: [all, externalOnly, none]
+        description: "Who gets notification emails about the event: 'all' (default) emails every attendee, 'externalOnly' emails only attendees outside your own domain, 'none' sends nothing. On create this is the invitation email; on update, the change notification."
     defaults:
       calendarId: primary
 

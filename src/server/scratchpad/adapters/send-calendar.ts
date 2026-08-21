@@ -16,6 +16,7 @@ interface CalendarEventParams {
   allDay?: boolean;
   location?: string;
   attendees?: string;
+  sendUpdates?: string;
 }
 
 export async function sendCalendarEvent(
@@ -28,12 +29,18 @@ export async function sendCalendarEvent(
     return { text: `Scratchpad ${scratchpadId} not found.`, refs: { error: true } };
   }
 
-  const { email, summary, start, end, location, attendees, allDay = false } = targetParams;
+  const { email, summary, start, end, location, attendees, allDay = false, sendUpdates = 'all' } = targetParams;
   if (!email || !summary || !start || (!allDay && !end)) {
     return {
       text: `Send failed: email, summary, and start are required for calendar_event` +
         (allDay ? '.' : ', and end is required for timed events (or pass allDay: true).') +
         `\nScratchpad ${scratchpadId} is still active.`,
+      refs: { error: true, scratchpadId },
+    };
+  }
+  if (!['all', 'externalOnly', 'none'].includes(sendUpdates)) {
+    return {
+      text: `Send failed: sendUpdates must be 'all', 'externalOnly', or 'none' (got '${sendUpdates}').\nScratchpad ${scratchpadId} is still active.`,
       refs: { error: true, scratchpadId },
     };
   }
@@ -61,6 +68,8 @@ export async function sendCalendarEvent(
       .split(',').map((e) => e.trim()).filter(Boolean)
       .map((address) => ({ email: address }));
   }
+  // sendUpdates is a QUERY param on events.insert — the descriptor routes it there.
+  body.sendUpdates = sendUpdates;
 
   try {
     const data = await call('calendar', 'events.insert', body, { account: email }) as Record<string, unknown>;
