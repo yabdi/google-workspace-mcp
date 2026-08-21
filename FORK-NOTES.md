@@ -43,6 +43,34 @@ conflict by hand and keep this note updated.
   `manage_drive share` to opt out. Motivated by a real miss: Hamza was granted
   `writer` on a doc and never received the link.
 
+## Local enhancements (additive, not yet upstream)
+
+Net-new `manage_drive` capabilities ported from `~/code/gdrive-tools/scripts/gdrive.py`
+(the standalone helper built because `manage_drive` could not create folders). These are
+additive — they change no existing behavior, so they are clean candidates for an
+upstream PR rather than a "deviation". They cover the gaps `gdrive-tools` existed to fill:
+
+- **`createFolder`** — create a folder (optionally nested via `parentFolderId`).
+  `files.create` with `mimeType: application/vnd.google-apps.folder`; `parents` sent as
+  an array in the body.
+- **`listFolder`** / **`tree`** — list a folder's children (non-trashed) and print a
+  recursive tree with a file count (`files.list`).
+- **`trash`** — recoverable removal (`files.update` with `trashed: true`), the safe
+  alternative to the permanent `delete`.
+- **`setRole`** — change an existing collaborator's role by email, resolved to the
+  permission id first (`permissions.list` → `permissions.update`). Sends no notification.
+- **`share` `emailMessage`** — optional message in the "shared with you" notification.
+
+`files.create` and `permissions.update` are therefore newly exposed in
+`docs/api-surface.md` (drive 14 → 16 of 64).
+
+## Local feature (calendar `sendUpdates`, no upstream PR yet)
+
+`manage_calendar create`/`update` and the scratchpad `calendar_event` adapter accept a
+`sendUpdates` param (`all` | `externalOnly` | `none`) choosing who gets notification
+emails about the event. Committed locally and kept in this fork; deliberately **not**
+opened upstream yet.
+
 ## Never open an upstream PR for the fork-local sync workflow
 
 Commit `92ce327 chore: audit-gated upstream sync workflow` — `AGENTS.md`,
