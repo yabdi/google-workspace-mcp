@@ -14,9 +14,17 @@ PRs opened from this fork back to upstream, awaiting review/merge.
 |----|-------------|--------------|--------|--------|
 | [aaronsb/google-workspace-mcp#187](https://github.com/aaronsb/google-workspace-mcp/pull/187) | `security-audit-fixes` | Dependency security audit: `npm audit` 17 → 0 — production-reachable patches within semver (fast-uri, ip-address, hono, body-parser, @hono/node-server via `@modelcontextprotocol/sdk`; postcss, nanoid via `sanitize-html`), dev toolchain `@typescript-eslint` 6 → 7 (clears the minimatch/flatted ReDoS chain without `--force`), pin `typescript@^5.9.3` in devDependencies (was an undeclared transitive — an unconstrained re-resolution can hoist the TS7 native preview and break `tsc`), `src/version.ts` stamp sync | 2026-08-19 | Open |
 | [aaronsb/google-workspace-mcp#188](https://github.com/aaronsb/google-workspace-mcp/pull/188) | `feat/all-day-calendar-events` | All-day calendar events: `allDay: true` on `manage_calendar create`/`update` (Calendar API `date` fields, caller's inclusive end converted to the API's exclusive end date), `end` optional for all-day on create, timed ↔ all-day conversion on update, all-day display in `list`/`get`, scratchpad `calendar_event` support | 2026-08-19 | Open |
+| [aaronsb/google-workspace-mcp#189](https://github.com/aaronsb/google-workspace-mcp/pull/189) | `feat/drive-folders` | Drive folder operations + recoverable trash + silent role change: `createFolder`, `listFolder`, `tree`, `trash`, `setRole` (newly exposes `files.create` and `permissions.update`) | 2026-08-21 | Open |
+| [aaronsb/google-workspace-mcp#190](https://github.com/aaronsb/google-workspace-mcp/pull/190) | `feat/gmail-archive` | `manage_email archive`: save a message's headers + plain-text body to a workspace markdown file (local archive — does not touch the INBOX label) | 2026-08-21 | Open |
 
-Both PRs are already live on this fork's `main` (commits `c215bc5` and
+PRs #187 and #188 are already live on this fork's `main` (commits `c215bc5` and
 `1a04235`, pushed 2026-08-19) and running in the local MCP server.
+
+PRs #189 and #190 are the drive-folder and gmail-archive features in this fork's
+`main` too, but note **#189's head branch deliberately drops `share emailMessage`**:
+that param is entangled with the local `share`-notifies-by-default deviation below and is
+moot upstream (upstream's `share` always sets `sendNotificationEmail=false`). So
+`feat/drive-folders` ≠ `main`'s drive commit — do not reconcile them back onto `main`.
 
 **When upstream merges #187:** the fork already carries the identical change
 (`c215bc5`), so the next audit-gated sync (`scripts/sync-upstream.sh`) merges
