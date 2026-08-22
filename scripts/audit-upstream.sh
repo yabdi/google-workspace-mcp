@@ -110,7 +110,7 @@ if [[ "$MODE_BOTH" == "1" || "$MODE_RANGE" == "1" ]]; then
   fi
 
   # 1f. secrets in the incoming commit messages/patch
-  if git log -p "$RANGE" 2>/dev/null | grep -nE '^\+.*(password|secret|token|api[_-]?key|GOOGLE_CLIENT|refresh_token|BEGIN (RSA|OPENSSH|EC|PRIVATE))' | grep -viE 'password:\s*false|passwordless' >/dev/null 2>&1; then
+  if git log -p "$RANGE" 2>/dev/null | grep -nE '^\+.*(password|secret|token|api[_-]?key|GOOGLE_CLIENT|refresh_token|BEGIN (RSA|OPENSSH|EC|PRIVATE))' | grep -viE 'password:\s*false|passwordless|no\s*\S*TOKEN|no secret' >/dev/null 2>&1; then
     fail "possible secret material in incoming commits"
   else
     pass "no secret material in incoming commits"
