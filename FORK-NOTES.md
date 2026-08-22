@@ -28,6 +28,29 @@ hardening while keeping the two local deviations below.
 The PR head branches (`security-audit-fixes`, `feat/all-day-calendar-events`,
 `feat/drive-folders`, `feat/gmail-archive`) are deleted locally and remotely.
 
+## Conflict resolution policy
+
+When an audit-gated sync aborts on a merge conflict (`git merge --no-commit
+--no-ff upstream/main`), resolve each conflicted file by these rules, in order:
+
+1. **A documented local deviation always wins.** (`drive share` notify-by-default
+   + `emailMessage`, `calendar sendUpdates`.) Keep the fork's side — the deviation
+   is deliberate and upstream was not asked to adopt it.
+2. **Upstream's post-merge hardening of our own merged PRs is adopted.** It is
+   upstream's improvement to code we originated — take their version (e.g.
+   `setRole` requiring an explicit `role`, calendar `dateTime: null` to clear the
+   old shape, drive paging/escaping/dedup).
+3. **Net-new upstream changes are adopted wholesale.**
+
+When a deviation and upstream hardening collide in the *same* hunk, keep the
+deviation and re-apply the hardening's intent by hand. After resolving, run
+`make check` — it is the ground truth that the merge is coherent — then finish
+the audit gates and push (see `AGENTS.md` "Merge conflicts are normal").
+
+The first four PRs (#187–#190) all merged as reworked/squashed commits plus
+post-merge hardening, so the "already carries the identical change, merges
+cleanly" expectation was wrong; conflicts here are the norm, not a failure.
+
 ## Local deviations from upstream
 
 Deliberate behavior changes this fork carries that upstream does not — and

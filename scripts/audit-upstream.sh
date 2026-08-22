@@ -109,7 +109,11 @@ if [[ "$MODE_BOTH" == "1" || "$MODE_RANGE" == "1" ]]; then
     fi
   fi
 
-  # 1f. secrets in the incoming commit messages/patch
+  # 1f. secrets in the incoming commit messages/patch. The negation filter drops
+  # obvious "there is no secret here" declarations (`password: false`,
+  # `passwordless`, `no NPM_TOKEN`, `no secret to rotate`) so docs that describe a
+  # token's ABSENCE don't false-positive; extend that negation, never bypass the
+  # check, when a new one of this shape appears.
   if git log -p "$RANGE" 2>/dev/null | grep -nE '^\+.*(password|secret|token|api[_-]?key|GOOGLE_CLIENT|refresh_token|BEGIN (RSA|OPENSSH|EC|PRIVATE))' | grep -viE 'password:\s*false|passwordless|no\s*\S*TOKEN|no secret' >/dev/null 2>&1; then
     fail "possible secret material in incoming commits"
   else

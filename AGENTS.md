@@ -57,19 +57,55 @@ It enforces, in order:
 (and successes) notify via ntfy when `~/.config/gmail-inbox-watcher/config.json`
 exists; the log lives at `~/.local/share/google-workspace-mcp/sync.log`.
 
-Manual equivalent (when you must go step-by-step — same gates, same order):
-
-```bash
-git fetch upstream
-./scripts/audit-upstream.sh --range HEAD..upstream/main   # must PASS
-git merge --no-commit --no-ff upstream/main
-./scripts/audit-upstream.sh --worktree                    # must PASS
-git add -A && git commit --no-edit && git push origin main
-```
-
 Tuning: `AUDIT_MAX_HIGH` (default 0), `AUDIT_MAX_CRITICAL` (default 0) —
 raise only for a documented, unreachable dev-only chain. `NPM_CACHE_DIR` if
 the default npm cache is unwritable.
+
+### Merge conflicts are normal — resolve by policy, never by guess
+
+Upstream does **not** merge our PRs verbatim. It rebases, rewords, and often
+layers **post-merge hardening** on top of the merge (the #187–#190 merge added
+calendar all-day conversion fixes and drive paging/escaping/dedup after the PRs
+landed). So a sync that touches anything we opened upstream will **conflict** at
+step 4 — that is expected, not a failure, and the old assumption that "the fork
+already carries the identical change so it merges cleanly" is wrong.
+
+When the script aborts at step 4, resolve by hand **using the policy in
+`FORK-NOTES.md` ("Conflict resolution policy")**, then finish the remaining gates
+manually (same order, same gates):
+
+```bash
+git fetch upstream
+./scripts/audit-upstream.sh --range HEAD..upstream/main   # must PASS (step 3)
+git merge --no-commit --no-ff upstream/main               # step 4 — leaves conflicts for you
+#   resolve every conflicted file per the policy, then:
+make check                                                 # merged tree builds + passes its tests
+./scripts/audit-upstream.sh --worktree                     # step 5 — must PASS
+git add -A && git commit --no-edit && git push origin main # steps 6–8
+```
+
+Resolution policy (the live list of deviations is in `FORK-NOTES.md`):
+
+1. **A documented local deviation always wins.** (`drive share` notify-by-default
+   + `emailMessage`, `calendar sendUpdates`.) Keep the fork's side.
+2. **Upstream's post-merge hardening of our own merged PRs is adopted.** It is
+   upstream's improvement to code we originated — take their version (e.g.
+   `setRole` requiring an explicit `role`, calendar `dateTime: null`).
+3. **Net-new upstream changes are adopted wholesale.**
+
+When a deviation and upstream hardening collide in the *same* hunk, keep the
+deviation and re-apply the hardening's intent by hand. Always run `make check`
+after resolving — it is the ground truth that the merge is coherent.
+
+### Audit false positives: "no X / not X" is not a secret
+
+The pre-merge secret scan (`audit-upstream.sh` check 1f) flags added lines
+mentioning `token`/`secret`/`password` etc. It already negates obvious
+declarations (`password: false`, `passwordless`, `no <THING>TOKEN`,
+`no secret`) — e.g. upstream's `docs/release-runbook.md` line "no \`NPM_TOKEN\`,
+no secret to rotate". If a sync blocks on a new false positive of this shape,
+extend the same negation in `scripts/audit-upstream.sh` rather than bypassing
+the gate; the goal is to keep real secrets flagged, not to whitelist everything.
 
 ## After merging / after any code change
 

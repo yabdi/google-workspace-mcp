@@ -20,6 +20,11 @@
 #   7. MCP stdio smoke test (built server boots and answers initialize)
 #   8. push to the fork
 #
+# Merge conflicts at step 4 are the norm, not a failure: upstream rebases/reworks
+# our PRs and layers post-merge hardening on top. When it aborts there, resolve
+# by hand using the policy in FORK-NOTES.md ("Conflict resolution policy") and
+# finish the remaining gates in the same order (see scripts/README.md).
+#
 # Any gate failure aborts BEFORE the merge is committed/pushed (the staged
 # merge is aborted), so a bad upstream change never lands on the fork.
 # Failures are notified via ntfy when the gmail-inbox-watcher config exists;
@@ -90,8 +95,9 @@ log "staging merge of upstream/main..."
 if ! git merge --no-commit --no-ff upstream/main >/dev/null 2>&1; then
   git merge --abort >/dev/null 2>&1 || true
   notify "google-workspace fork: sync BLOCKED (merge conflict)" \
-    "Merging upstream/main conflicts. Resolve manually in $REPO_DIR (likely package-lock.json)."
+    "Merging upstream/main conflicts (expected when our PRs were reworked/hardened upstream). Resolve by hand per FORK-NOTES.md 'Conflict resolution policy', then finish the remaining gates: audit --range → merge --no-commit → resolve → make check → audit --worktree → commit → push."
   log "ABORT: merge conflict — nothing merged, nothing pushed"
+  log "resolve per FORK-NOTES.md 'Conflict resolution policy' (deviations win; adopt upstream hardening of our PRs; adopt net-new), then finish gates manually"
   exit 1
 fi
 

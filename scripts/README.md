@@ -49,6 +49,31 @@ merge is aborted). Failures and successes notify via ntfy when
 `~/.config/gmail-inbox-watcher/config.json` exists; otherwise the log is
 `~/.local/share/google-workspace-mcp/sync.log`.
 
+### Merge conflicts are the norm, not a failure
+
+Upstream rebases/reworks our PRs and layers post-merge hardening on top, so a
+sync that touches anything we opened upstream **conflicts at step 4**. When the
+script aborts there, resolve by hand using the policy in `FORK-NOTES.md`
+("Conflict resolution policy"), then finish the remaining gates in the same
+order:
+
+```bash
+./scripts/audit-upstream.sh --range HEAD..upstream/main   # step 3 — must PASS
+git merge --no-commit --no-ff upstream/main               # step 4 — leaves conflicts for you
+#   resolve every conflicted file per the policy, then:
+make check                                                 # merged tree builds + passes tests
+./scripts/audit-upstream.sh --worktree                     # step 5 — must PASS
+git add -A && git commit --no-edit && git push origin main # steps 6–8
+```
+
+### Audit false positives: "no X / not X" is not a secret
+
+The pre-merge secret scan (check 1f) negates obvious "there is no secret here"
+declarations: `password: false`, `passwordless`, `no <THING>TOKEN`, `no secret`.
+If a sync blocks on a new false positive of this shape (e.g. a release runbook
+saying "no `NPM_TOKEN`"), extend that same negation in `audit-upstream.sh`
+rather than bypassing the gate.
+
 ## How the server is launched
 
 - The MCP configs (`~/.config/opencode/opencode.jsonc` →
