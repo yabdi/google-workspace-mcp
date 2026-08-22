@@ -6,35 +6,27 @@ Files at the repo root that upstream does not have (this file, `AGENTS.md`,
 `scripts/sync-upstream.sh`, …) are fork-local: they never come from upstream
 and never go back in an upstream sync.
 
-## Open upstream pull requests
+## Merged upstream pull requests
 
-PRs opened from this fork back to upstream, awaiting review/merge.
+All four PRs opened from this fork were merged upstream on 2026-08-21/22 and are
+now live on this fork's `main` via the audit-gated sync (merge `3912bc9`).
 
-| PR | Head branch | What it adds | Opened | Status |
-|----|-------------|--------------|--------|--------|
-| [aaronsb/google-workspace-mcp#187](https://github.com/aaronsb/google-workspace-mcp/pull/187) | `security-audit-fixes` | Dependency security audit: `npm audit` 17 → 0 — production-reachable patches within semver (fast-uri, ip-address, hono, body-parser, @hono/node-server via `@modelcontextprotocol/sdk`; postcss, nanoid via `sanitize-html`), dev toolchain `@typescript-eslint` 6 → 7 (clears the minimatch/flatted ReDoS chain without `--force`), pin `typescript@^5.9.3` in devDependencies (was an undeclared transitive — an unconstrained re-resolution can hoist the TS7 native preview and break `tsc`), `src/version.ts` stamp sync | 2026-08-19 | Open |
-| [aaronsb/google-workspace-mcp#188](https://github.com/aaronsb/google-workspace-mcp/pull/188) | `feat/all-day-calendar-events` | All-day calendar events: `allDay: true` on `manage_calendar create`/`update` (Calendar API `date` fields, caller's inclusive end converted to the API's exclusive end date), `end` optional for all-day on create, timed ↔ all-day conversion on update, all-day display in `list`/`get`, scratchpad `calendar_event` support | 2026-08-19 | Open |
-| [aaronsb/google-workspace-mcp#189](https://github.com/aaronsb/google-workspace-mcp/pull/189) | `feat/drive-folders` | Drive folder operations + recoverable trash + silent role change: `createFolder`, `listFolder`, `tree`, `trash`, `setRole` (newly exposes `files.create` and `permissions.update`) | 2026-08-21 | Open |
-| [aaronsb/google-workspace-mcp#190](https://github.com/aaronsb/google-workspace-mcp/pull/190) | `feat/gmail-archive` | `manage_email archive`: save a message's headers + plain-text body to a workspace markdown file (local archive — does not touch the INBOX label) | 2026-08-21 | Open |
+| PR | Head branch | What it added | Merged |
+|----|-------------|---------------|--------|
+| [aaronsb/google-workspace-mcp#187](https://github.com/aaronsb/google-workspace-mcp/pull/187) | `security-audit-fixes` | Dependency security audit: `npm audit` 17 → 0 (fast-uri, ip-address, hono, body-parser, @hono/node-server via `@modelcontextprotocol/sdk`; postcss, nanoid via `sanitize-html`), dev `@typescript-eslint` 6 → 7, pin `typescript@^5.9.3`, `src/version.ts` stamp sync | 2026-08-22 |
+| [aaronsb/google-workspace-mcp#188](https://github.com/aaronsb/google-workspace-mcp/pull/188) | `feat/all-day-calendar-events` | All-day calendar events: `allDay: true` on create/update, inclusive→exclusive end conversion, timed ↔ all-day conversion, all-day display, scratchpad `calendar_event` support | 2026-08-22 |
+| [aaronsb/google-workspace-mcp#189](https://github.com/aaronsb/google-workspace-mcp/pull/189) | `feat/drive-folders` | Drive folders: `createFolder`, `listFolder`, `tree`, `trash`, `setRole` (exposes `files.create` and `permissions.update`) | 2026-08-22 |
+| [aaronsb/google-workspace-mcp#190](https://github.com/aaronsb/google-workspace-mcp/pull/190) | `feat/gmail-archive` | `manage_email archive`: save headers + plain-text body to a workspace markdown file | 2026-08-22 |
 
-PRs #187 and #188 are already live on this fork's `main` (commits `c215bc5` and
-`1a04235`, pushed 2026-08-19) and running in the local MCP server.
+Upstream layered **post-merge hardening** over these after merging (calendar
+all-day conversion now derives the missing side / sends `dateTime: null` to clear
+the old shape; drive `listChildren` pages to exhaustion and escapes query values;
+`tree` caps depth and de-dups revisited folders; `setRole` requires an explicit
+`role` instead of defaulting to reader). This fork's sync adopted all of that
+hardening while keeping the two local deviations below.
 
-PRs #189 and #190 are the drive-folder and gmail-archive features in this fork's
-`main` too, but note **#189's head branch deliberately drops `share emailMessage`**:
-that param is entangled with the local `share`-notifies-by-default deviation below and is
-moot upstream (upstream's `share` always sets `sendNotificationEmail=false`). So
-`feat/drive-folders` ≠ `main`'s drive commit — do not reconcile them back onto `main`.
-
-**When upstream merges #187:** the fork already carries the identical change
-(`c215bc5`), so the next audit-gated sync (`scripts/sync-upstream.sh`) merges
-it cleanly. Then delete the remote and local `security-audit-fixes` branches
-and drop the row above.
-
-**When upstream merges #188:** the fork already carries the identical change
-(`1a04235`), so the next audit-gated sync merges it cleanly. Then delete the
-remote and local `feat/all-day-calendar-events` branches and drop the row
-above.
+The PR head branches (`security-audit-fixes`, `feat/all-day-calendar-events`,
+`feat/drive-folders`, `feat/gmail-archive`) are deleted locally and remotely.
 
 ## Local deviations from upstream
 
@@ -51,30 +43,18 @@ conflict by hand and keep this note updated.
   `manage_drive share` to opt out. Motivated by a real miss: Hamza was granted
   `writer` on a doc and never received the link.
 
-## Local enhancements (additive, not yet upstream)
+## Former local enhancements (now upstream)
 
-Net-new `manage_drive` capabilities ported from `~/code/gdrive-tools/scripts/gdrive.py`
-(the standalone helper built because `manage_drive` could not create folders). These are
-additive — they change no existing behavior, so they are clean candidates for an
-upstream PR rather than a "deviation". They cover the gaps `gdrive-tools` existed to fill:
+These were ported from `~/code/gdrive-tools/scripts/gdrive.py` and opened as
+PRs #189/#190, now merged upstream and adopted in this fork via the sync
+(merge `3912bc9`). No longer fork-local — they track upstream:
 
-- **`createFolder`** — create a folder (optionally nested via `parentFolderId`).
-  `files.create` with `mimeType: application/vnd.google-apps.folder`; `parents` sent as
-  an array in the body.
-- **`listFolder`** / **`tree`** — list a folder's children (non-trashed) and print a
-  recursive tree with a file count (`files.list`).
-- **`trash`** — recoverable removal (`files.update` with `trashed: true`), the safe
-  alternative to the permanent `delete`.
-- **`setRole`** — change an existing collaborator's role by email, resolved to the
-  permission id first (`permissions.list` → `permissions.update`). Sends no notification.
-- **`share` `emailMessage`** — optional message in the "shared with you" notification.
-
-`files.create` and `permissions.update` are therefore newly exposed in
-`docs/api-surface.md` (drive 14 → 16 of 64).
-
-`manage_email archive` — save one message's headers + plain-text body to a workspace
-markdown file (port of `~/code/gdrive-tools/scripts/archive_gmail.py`). Reads the message
-and writes a LOCAL file; does not touch Gmail's INBOX label.
+- `createFolder`, `listFolder`, `tree`, `trash`, `setRole` (drive) — now upstream,
+  with upstream's post-merge hardening (paging, query escaping, depth cap, dedup,
+  `setRole` requires an explicit `role`).
+- `manage_email archive` — now upstream (PR #190).
+- `share` `emailMessage` — merged into the local `share` deviation below (upstream
+  did not adopt the `emailMessage` param or the notify-by-default behavior).
 
 ## Local feature (calendar `sendUpdates`, no upstream PR yet)
 
