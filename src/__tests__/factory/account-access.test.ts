@@ -159,6 +159,23 @@ describe('failing open', () => {
   });
 });
 
+describe('static access-token mode', () => {
+  it('skips account-access enforcement and never reads a credential', async () => {
+    process.env.GOOGLE_ACCESS_TOKEN = 'static-token';
+    try {
+      // A read-only grant would otherwise block this write. In static mode there is no
+      // per-account consent to enforce, so the policy must allow without a credential read.
+      grant(['contacts'], 'read');
+      const result = await evaluatePolicies([], ctx('create'), 'people',
+        op({ service: 'contacts', googleService: 'people', resource: 'people.createContact', type: 'action' }));
+      expect(result.action).toBe('allow');
+      expect(readCredential).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.GOOGLE_ACCESS_TOKEN;
+    }
+  });
+});
+
 describe('writeScopesFor', () => {
   // The subtraction that makes the read-only case work at all. Two services carry
   // read-only scopes INSIDE their read/write set because they need them either way, so

@@ -86,6 +86,16 @@ PRs #189/#190, now merged upstream and adopted in this fork via the sync
 emails about the event. Committed locally and kept in this fork; deliberately **not**
 opened upstream yet.
 
+## Local feature (static access token, no upstream PR)
+
+`GOOGLE_ACCESS_TOKEN`, when set, puts the server in **static access-token mode**:
+`getAccessToken` returns that token for every account and never reads `accounts.json` or
+the per-account refresh-token files (and never calls Google's token endpoint), and the
+`account-access` safety policy is skipped — there is no per-account consent to enforce,
+and Google still refuses insufficient scopes at the API itself. Added for Fiirso-Lite
+per-user Google: the gateway child is spawned with the caller's device-held access token
+injected and no operator credential on disk. Fork-local; deliberately not opened upstream.
+
 ## Never open an upstream PR for the fork-local sync workflow
 
 Commit `92ce327 chore: audit-gated upstream sync workflow` — `AGENTS.md`,

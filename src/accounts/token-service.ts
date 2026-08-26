@@ -26,12 +26,28 @@ export class TokenRefreshError extends Error {
 }
 
 /**
+ * Static access-token mode (device-held token, no on-disk credential).
+ *
+ * When `GOOGLE_ACCESS_TOKEN` is set, every account resolves to that token and the
+ * server skips its own OAuth credential store (`accounts.json` + per-account refresh
+ * tokens) entirely. This is how a per-user gateway child runs with the caller's
+ * access token injected and no operator credential on disk.
+ */
+export function staticAccessToken(): string | undefined {
+  const token = process.env.GOOGLE_ACCESS_TOKEN;
+  return token && token.trim() !== '' ? token.trim() : undefined;
+}
+
+/**
  * Get a valid access token for an account.
  *
  * Returns from cache if >60s remaining, otherwise exchanges
  * the stored refresh token for a fresh access token.
  */
 export async function getAccessToken(email: string): Promise<string> {
+  const staticToken = staticAccessToken();
+  if (staticToken) return staticToken;
+
   const cached = cache.get(email);
   if (cached && cached.expiresAt > Date.now() + EXPIRY_BUFFER) {
     return cached.accessToken;

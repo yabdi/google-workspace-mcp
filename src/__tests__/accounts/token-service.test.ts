@@ -110,6 +110,28 @@ describe('token-service', () => {
       expect(body.get('refresh_token')).toBe('test-refresh-token');
       expect(body.get('grant_type')).toBe('refresh_token');
     });
+
+    it('returns the static token when GOOGLE_ACCESS_TOKEN is set, without refreshing', async () => {
+      process.env.GOOGLE_ACCESS_TOKEN = 'static-token-123';
+      try {
+        const token = await getAccessToken('user@example.com');
+        expect(token).toBe('static-token-123');
+        expect(mockReadCredential).not.toHaveBeenCalled();
+        expect(mockFetch).not.toHaveBeenCalled();
+      } finally {
+        delete process.env.GOOGLE_ACCESS_TOKEN;
+      }
+    });
+
+    it('static mode ignores the account email', async () => {
+      process.env.GOOGLE_ACCESS_TOKEN = 'static-token-123';
+      try {
+        expect(await getAccessToken('a@test.com')).toBe('static-token-123');
+        expect(await getAccessToken('b@test.com')).toBe('static-token-123');
+      } finally {
+        delete process.env.GOOGLE_ACCESS_TOKEN;
+      }
+    });
   });
 
   describe('invalidateToken', () => {

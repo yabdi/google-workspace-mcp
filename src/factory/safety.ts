@@ -34,6 +34,7 @@
 import { readCredential } from '../accounts/credentials.js';
 import { anyScopesFor, writeScopesFor } from '../accounts/oauth.js';
 import { loadDescriptor } from '../google/descriptor.js';
+import { staticAccessToken } from '../accounts/token-service.js';
 import type { PatchContext } from './types.js';
 
 /** Policy decision: what to do with an intercepted operation. */
@@ -205,6 +206,11 @@ export const accountAccess: SafetyPolicy = {
   description: 'Refuse writes from a read-only account, naming the account and the fix',
   applies: () => true,
   evaluate: async (_args, ctx, _service, op) => {
+    // Static access-token mode has no per-account consent to enforce: the token is
+    // device-held, there is no credential file to read, and Google itself refuses
+    // insufficient scopes. Skip before touching the credential store.
+    if (staticAccessToken()) return { action: 'allow' };
+
     // No account (a service that needs none) or no manifest info: nothing to check against.
     if (!ctx.account || !op) return { action: 'allow' };
 
