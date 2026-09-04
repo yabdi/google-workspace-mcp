@@ -96,6 +96,17 @@ and Google still refuses insufficient scopes at the API itself. Added for Fiirso
 per-user Google: the gateway child is spawned with the caller's device-held access token
 injected and no operator credential on disk. Fork-local; deliberately not opened upstream.
 
+## Local feature (drafts list/delete, no upstream PR)
+
+`manage_email` can now delete drafts: `listDrafts` (users.drafts.list, hydrated with each
+draft's recipient/subject/date) and `deleteDraft` (users.drafts.delete by **draft id** —
+drafts are a separate Gmail resource, so a message id from `search in:drafts` cannot be
+deleted). Added because upstream `manage_email` had no way to discard drafts (its `trash`
+addresses messages, and Gmail does not route drafts through the trash). Live-verified
+2026-09-03 (create → list → delete round-trip on yusuf.abdi@gmail.com). Fork-local for
+now; a genuine upstream PR candidate once upstream confirms it wants the surface
+(coverage baseline + `docs/api-surface.md` updated to mark both methods covered).
+
 ## Never open an upstream PR for the fork-local sync workflow
 
 Commit `92ce327 chore: audit-gated upstream sync workflow` — `AGENTS.md`,
