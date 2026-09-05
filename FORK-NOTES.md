@@ -96,16 +96,23 @@ and Google still refuses insufficient scopes at the API itself. Added for Fiirso
 per-user Google: the gateway child is spawned with the caller's device-held access token
 injected and no operator credential on disk. Fork-local; deliberately not opened upstream.
 
-## Local feature (drafts list/delete, no upstream PR)
+## Open upstream PR (drafts list/delete) — [aaronsb/google-workspace-mcp#194](https://github.com/aaronsb/google-workspace-mcp/pull/194)
+
+Opened 2026-09-03 from head branch `yabdi:feat/gmail-delete-drafts` (deleted after merge,
+same as the #187–#190 heads).
 
 `manage_email` can now delete drafts: `listDrafts` (users.drafts.list, hydrated with each
 draft's recipient/subject/date) and `deleteDraft` (users.drafts.delete by **draft id** —
 drafts are a separate Gmail resource, so a message id from `search in:drafts` cannot be
 deleted). Added because upstream `manage_email` had no way to discard drafts (its `trash`
 addresses messages, and Gmail does not route drafts through the trash). Live-verified
-2026-09-03 (create → list → delete round-trip on yusuf.abdi@gmail.com). Fork-local for
-now; a genuine upstream PR candidate once upstream confirms it wants the surface
-(coverage baseline + `docs/api-surface.md` updated to mark both methods covered).
+2026-09-03 (create → list → delete round-trip on yusuf.abdi@gmail.com).
+
+Fork carries the same change on `main` (commit `f0c0c7a`). When upstream merges and the
+next audit-gated sync runs, expect a conflict on the touched files and adopt upstream's
+post-merge hardening per the conflict-resolution policy above. `docs/api-surface.md` on
+the fork is stale until the next `make coverage` run; upstream's copy is regenerated in
+their own docs workflow.
 
 ## Never open an upstream PR for the fork-local sync workflow
 
