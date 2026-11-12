@@ -66,6 +66,12 @@ make check                                                 # merged tree builds 
 git add -A && git commit --no-edit && git push origin main # steps 6–8
 ```
 
+Use `git add -A`, **not** `git add <conflicted files>`: the worktree audit may
+have rewritten `package-lock.json` (`npm audit fix`), and staging only the
+conflicts publishes a vulnerable lockfile while the gate still reports PASS.
+After committing, `git status --porcelain` must be empty — `sync-upstream.sh`
+now aborts before pushing if anything is still dirty.
+
 ### Audit secret scan: credential shapes, not prose mentions
 
 Check 1f flags **shapes that can be a secret** — an assignment of an 8+-char

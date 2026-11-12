@@ -117,6 +117,19 @@ git commit --no-edit >/dev/null
 MERGED_SHA="$(git rev-parse --short HEAD)"
 log "merge committed: $MERGED_SHA"
 
+# ── 6b. clean-tree guard ────────────────────────────────────────────────────
+# The worktree audit may have rewritten package-lock.json (`npm audit fix`)
+# after the merge result was staged. `git add -A` picks that up; if anything is
+# still dirty, the commit does not represent the tree the gates passed — never
+# push it.
+if [[ -n "$(git status --porcelain)" ]]; then
+  notify "google-workspace fork: sync BLOCKED (dirty tree)" \
+    "Merge committed locally ($MERGED_SHA) but the working tree is dirty — not pushed. See $LOG_FILE"
+  log "ABORT: working tree dirty after commit — the audit's changes were not all staged"
+  git status --porcelain | sed 's/^/    /' | tee -a "$LOG_FILE"
+  exit 1
+fi
+
 # ── 7. MCP stdio smoke test (built server from the merged tree) ─────────────
 log "smoke test: MCP stdio handshake on built server..."
 if ! printf '%s\n' \

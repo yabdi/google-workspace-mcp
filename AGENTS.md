@@ -84,6 +84,11 @@ make check                                                 # merged tree builds 
 git add -A && git commit --no-edit && git push origin main # steps 6–8
 ```
 
+`git add -A` (not just the conflicted files): the worktree audit can rewrite
+`package-lock.json` via `npm audit fix`, and the merge commit must record the
+tree the gates actually passed. `git status --porcelain` must be empty after the
+commit — the script aborts before pushing if it is not.
+
 Resolution policy (the live list of deviations is in `FORK-NOTES.md`):
 
 1. **A documented local deviation always wins.** (`drive share` notify-by-default
