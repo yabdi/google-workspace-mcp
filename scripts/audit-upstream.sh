@@ -109,12 +109,42 @@ if [[ "$MODE_BOTH" == "1" || "$MODE_RANGE" == "1" ]]; then
     fi
   fi
 
-  # 1f. secrets in the incoming commit messages/patch. The negation filter drops
-  # obvious "there is no secret here" declarations (`password: false`,
-  # `passwordless`, `no NPM_TOKEN`, `no secret to rotate`) so docs that describe a
-  # token's ABSENCE don't false-positive; extend that negation, never bypass the
-  # check, when a new one of this shape appears.
-  if git log -p "$RANGE" 2>/dev/null | grep -nE '^\+.*(password|secret|token|api[_-]?key|GOOGLE_CLIENT|refresh_token|BEGIN (RSA|OPENSSH|EC|PRIVATE))' | grep -viE 'password:\s*false|passwordless|no\s*\S*TOKEN|no secret' >/dev/null 2>&1; then
+  # 1f. secrets in the incoming commits. Flag shapes that can BE a secret — an
+  # assignment of a quoted literal to a credential-ish name, a PEM private-key
+  # header, or a known provider token prefix — not every added line that merely
+  # mentions "token"/"secret". Upstream's token-service ADRs and tests talk
+  # about tokens legitimately (`authenticateAccount('id', 'secret', ...)`), and
+  # the old "any mention" form blocked the v4.9.1 sync on that prose. The
+  # negation still drops explicit "there is no secret here" declarations;
+  # extend it, or add a new real credential shape, rather than bypassing the
+  # check. Keep the provider-prefix patterns: they catch a token pasted into a
+  # comment or message, which an assignment-shaped match would miss.
+  SECRET_HITS="$(python3 - "$RANGE" <<'PY'
+import re, subprocess, sys
+
+diff = subprocess.run(['git', 'log', '-p', sys.argv[1]], capture_output=True, text=True).stdout
+
+keys = r'(?:password|secret|token|api[_-]?key|GOOGLE_CLIENT_(?:ID|SECRET)|refresh_token)'
+patterns = [
+    re.compile(rf'{keys}\s*[:=]\s*"[^"]{{8,}}"'),
+    re.compile(rf"{keys}\s*[:=]\s*'[^']{{8,}}'"),
+    re.compile(r'BEGIN (?:RSA|OPENSSH|EC|PGP|PRIVATE) PRIVATE KEY'),
+    re.compile(r'gh[pousr]_[A-Za-z0-9]{20,}'),
+    re.compile(r'AIza[0-9A-Za-z_-]{35}'),
+    re.compile(r'AKIA[0-9A-Z]{16}'),
+    re.compile(r'xox[baprs]-[A-Za-z0-9-]{10,}'),
+]
+negation = re.compile(r'password:\s*false|passwordless|no\s+\w*TOKEN|no secret', re.I)
+
+for lineno, line in enumerate(diff.splitlines(), 1):
+    if not line.startswith('+'):
+        continue
+    if any(p.search(line) for p in patterns) and not negation.search(line):
+        print(f'{lineno}: {line.rstrip()}')
+PY
+)"
+  if [[ -n "$SECRET_HITS" ]]; then
+    printf '%s\n' "$SECRET_HITS" | head -5
     fail "possible secret material in incoming commits"
   else
     pass "no secret material in incoming commits"

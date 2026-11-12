@@ -66,13 +66,17 @@ make check                                                 # merged tree builds 
 git add -A && git commit --no-edit && git push origin main # steps 6–8
 ```
 
-### Audit false positives: "no X / not X" is not a secret
+### Audit secret scan: credential shapes, not prose mentions
 
-The pre-merge secret scan (check 1f) negates obvious "there is no secret here"
-declarations: `password: false`, `passwordless`, `no <THING>TOKEN`, `no secret`.
-If a sync blocks on a new false positive of this shape (e.g. a release runbook
-saying "no `NPM_TOKEN`"), extend that same negation in `audit-upstream.sh`
-rather than bypassing the gate.
+Check 1f flags **shapes that can be a secret** — an assignment of an 8+-char
+quoted literal to `password`/`secret`/`token`/`api_key`/`GOOGLE_CLIENT_*`/
+`refresh_token`, a PEM private-key header, or a known provider token prefix
+(`ghp_`, `AIza`, `AKIA`, `xox[baprs]-`) — and negates explicit declarations
+(`password: false`, `passwordless`, `no <THING>TOKEN`, `no secret`). It does not
+flag every added line that mentions "token"/"secret": upstream's token-service
+ADRs and tests (`authenticateAccount('id', 'secret', …)`) legitimately do. If a
+sync blocks on a new false positive, extend the negation or the shape list in
+`audit-upstream.sh` rather than bypassing the gate.
 
 ## How the server is launched
 

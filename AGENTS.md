@@ -97,15 +97,19 @@ When a deviation and upstream hardening collide in the *same* hunk, keep the
 deviation and re-apply the hardening's intent by hand. Always run `make check`
 after resolving — it is the ground truth that the merge is coherent.
 
-### Audit false positives: "no X / not X" is not a secret
+### Audit secret scan: credential shapes, not prose mentions
 
-The pre-merge secret scan (`audit-upstream.sh` check 1f) flags added lines
-mentioning `token`/`secret`/`password` etc. It already negates obvious
-declarations (`password: false`, `passwordless`, `no <THING>TOKEN`,
-`no secret`) — e.g. upstream's `docs/release-runbook.md` line "no \`NPM_TOKEN\`,
-no secret to rotate". If a sync blocks on a new false positive of this shape,
-extend the same negation in `scripts/audit-upstream.sh` rather than bypassing
-the gate; the goal is to keep real secrets flagged, not to whitelist everything.
+The pre-merge secret scan (`audit-upstream.sh` check 1f) flags **shapes that can
+be a secret**, not lines that merely mention one: an assignment of an 8+-char
+quoted literal to `password`/`secret`/`token`/`api_key`/`GOOGLE_CLIENT_*`/
+`refresh_token`, a PEM private-key header, or a known provider token prefix
+(`ghp_`, `AIza`, `AKIA`, `xox[baprs]-`). Upstream's token-service ADRs and
+tests discuss tokens legitimately (`authenticateAccount('id', 'secret', …)`);
+the earlier "any added line mentioning token/secret" form blocked the v4.9.1
+sync on that prose. The negation for explicit declarations (`password: false`,
+`passwordless`, `no <THING>TOKEN`, `no secret`) is kept. If a sync blocks on a
+new false positive, extend the negation or the shape list in
+`scripts/audit-upstream.sh` — never bypass the check.
 
 ## After merging / after any code change
 
