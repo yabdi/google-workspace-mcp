@@ -8,8 +8,9 @@ and never go back in an upstream sync.
 
 ## Merged upstream pull requests
 
-All four PRs opened from this fork were merged upstream on 2026-08-21/22 and are
-now live on this fork's `main` via the audit-gated sync (merge `3912bc9`).
+All five PRs opened from this fork were merged upstream (2026-08-21/22 and
+2026-10-01) and are now live on this fork's `main` via the audit-gated sync
+(merges `3912bc9`, `1f54153`).
 
 | PR | Head branch | What it added | Merged |
 |----|-------------|---------------|--------|
@@ -17,6 +18,7 @@ now live on this fork's `main` via the audit-gated sync (merge `3912bc9`).
 | [aaronsb/google-workspace-mcp#188](https://github.com/aaronsb/google-workspace-mcp/pull/188) | `feat/all-day-calendar-events` | All-day calendar events: `allDay: true` on create/update, inclusive→exclusive end conversion, timed ↔ all-day conversion, all-day display, scratchpad `calendar_event` support | 2026-08-22 |
 | [aaronsb/google-workspace-mcp#189](https://github.com/aaronsb/google-workspace-mcp/pull/189) | `feat/drive-folders` | Drive folders: `createFolder`, `listFolder`, `tree`, `trash`, `setRole` (exposes `files.create` and `permissions.update`) | 2026-08-22 |
 | [aaronsb/google-workspace-mcp#190](https://github.com/aaronsb/google-workspace-mcp/pull/190) | `feat/gmail-archive` | `manage_email archive`: save headers + plain-text body to a workspace markdown file | 2026-08-22 |
+| [aaronsb/google-workspace-mcp#194](https://github.com/aaronsb/google-workspace-mcp/pull/194) | `feat/gmail-delete-drafts` | `manage_email` drafts: `listDrafts` (draft ids `r…`, hydrated with recipient/subject/date) and `deleteDraft` (by draft id, not message id) | 2026-10-01 |
 
 Upstream layered **post-merge hardening** over these after merging (calendar
 all-day conversion now derives the missing side / sends `dateTime: null` to clear
@@ -96,23 +98,20 @@ and Google still refuses insufficient scopes at the API itself. Added for Fiirso
 per-user Google: the gateway child is spawned with the caller's device-held access token
 injected and no operator credential on disk. Fork-local; deliberately not opened upstream.
 
-## Open upstream PR (drafts list/delete) — [aaronsb/google-workspace-mcp#194](https://github.com/aaronsb/google-workspace-mcp/pull/194)
+## Merged upstream PR (drafts list/delete) — [aaronsb/google-workspace-mcp#194](https://github.com/aaronsb/google-workspace-mcp/pull/194)
 
-Opened 2026-09-03 from head branch `yabdi:feat/gmail-delete-drafts` (deleted after merge,
-same as the #187–#190 heads).
+Opened 2026-09-03 from head branch `yabdi:feat/gmail-delete-drafts`; **merged
+upstream 2026-10-01** as `8cbd026` plus review fix `21653e0` (deleteDraft is
+blocked when the no-delete safety policy is on). The v4.9.1 sync (`1f54153`)
+adopted upstream's reworked version wholesale: hydration moved to
+`src/services/gmail/hydrate.ts`, `listDrafts` pages like every other list, and
+the hand-rolled local `hydrateMessages` is gone.
 
-`manage_email` can now delete drafts: `listDrafts` (users.drafts.list, hydrated with each
-draft's recipient/subject/date) and `deleteDraft` (users.drafts.delete by **draft id** —
-drafts are a separate Gmail resource, so a message id from `search in:drafts` cannot be
-deleted). Added because upstream `manage_email` had no way to discard drafts (its `trash`
-addresses messages, and Gmail does not route drafts through the trash). Live-verified
-2026-09-03 (create → list → delete round-trip on yusuf.abdi@gmail.com).
-
-Fork carries the same change on `main` (commit `f0c0c7a`). When upstream merges and the
-next audit-gated sync runs, expect a conflict on the touched files and adopt upstream's
-post-merge hardening per the conflict-resolution policy above. `docs/api-surface.md` on
-the fork is stale until the next `make coverage` run; upstream's copy is regenerated in
-their own docs workflow.
+`manage_email` can discard drafts: `listDrafts` (users.drafts.list, hydrated
+with each draft's recipient/subject/date) and `deleteDraft` (users.drafts.delete
+by **draft id** — drafts are a separate Gmail resource, so a message id from
+`search in:drafts` cannot be deleted). Live-verified 2026-09-03 (create → list →
+delete round-trip on yusuf.abdi@gmail.com).
 
 ## Never open an upstream PR for the fork-local sync workflow
 
@@ -127,3 +126,10 @@ this box's read-only `~/.npm`) and describe this fork's maintenance process —
 none of it is something `aaronsb/google-workspace-mcp` would adopt. If
 upstream ever wants an audit-gated sync, it must be written fresh for
 upstream, not this fork's scripts.
+
+## Sync log
+
+| Date | Upstream | Fork merge | Result |
+|------|----------|-----------|--------|
+| 2026-08-22 | v4.5.0 — PRs #187–#190 plus post-merge hardening | `3912bc9` | gates passed |
+| 2026-11-12 | v4.5.1 → v4.9.1 (86 commits) | `1f54153`, then `133651c` (lockfile) | gates passed; 6 conflicts resolved per policy; upstream's lockfile audited 8 high/1 critical against today's advisories, `npm audit fix` → 0/0 |
